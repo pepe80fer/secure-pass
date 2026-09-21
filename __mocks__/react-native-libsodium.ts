@@ -108,3 +108,7 @@ export function to_base64(input: string | Uint8Array): string {
 export function from_base64(input: string): Uint8Array {
   return sodium.from_base64(input, sodium.base64_variants.URLSAFE_NO_PADDING);
 }
+
+export function to_hex(input: string | Uint8Array): string {
+  return sodium.to_hex(input);
+}
