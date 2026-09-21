@@ -136,7 +136,7 @@ secure-pass/
 
 ## 6. Plan de fases (MVP)
 
-- [ ] **Fase 0 — Setup:** proyecto Expo TS + EAS dev build (perfil de build enfocado en Android por ahora; código y config se mantienen multiplataforma para iOS a futuro), estructura de carpetas, theme tokens, sin dependencias de analítica.
+- [x] **Fase 0 — Setup:** proyecto Expo TS + EAS dev build (perfil de build enfocado en Android por ahora; código y config se mantienen multiplataforma para iOS a futuro), estructura de carpetas, theme tokens, sin dependencias de analítica.
 - [ ] **Fase 1 — Núcleo de seguridad:** `keyDerivation` (Argon2id), `vaultCipher` (XChaCha20-Poly1305), `secureKeyStore` (biometría); tests de round-trip y detección de manipulación.
 - [ ] **Fase 2 — Onboarding y acceso:** creación de contraseña maestra (con advertencia explícita de "sin recuperación"), pantalla de desbloqueo, sesión en memoria + auto-lock configurable.
 - [ ] **Fase 3 — CRUD del vault:** modelo `VaultEntry` + repositorio de persistencia, lista con favoritos, crear/editar/eliminar, copiar con auto-clear de portapapeles, filtro de categoría minimalista y no invasivo (ej. chips horizontales discretos sobre la lista, sin pantalla propia, ocultos si no hay categorías creadas).
