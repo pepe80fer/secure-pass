@@ -1,5 +1,18 @@
-import { Stack } from 'expo-router';
+import { Redirect, Stack } from 'expo-router';
+import { View } from 'react-native';
+
+import { touch, useIsUnlocked } from '@/auth/session';
 
 export default function VaultLayout() {
-  return <Stack screenOptions={{ headerShown: false }} />;
+  const isUnlocked = useIsUnlocked();
+
+  if (!isUnlocked) {
+    return <Redirect href="/(auth)/unlock" />;
+  }
+
+  return (
+    <View style={{ flex: 1 }} onTouchStart={touch}>
+      <Stack screenOptions={{ headerShown: false }} />
+    </View>
+  );
 }
