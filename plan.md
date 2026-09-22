@@ -150,7 +150,7 @@ secure-pass/
 - [x] **Fase 3 — CRUD del vault:** modelo `VaultEntry` + repositorio de persistencia, lista con favoritos, crear/editar/eliminar, copiar con auto-clear de portapapeles, filtro de categoría minimalista y no invasivo (ej. chips horizontales discretos sobre la lista, sin pantalla propia, ocultos si no hay categorías creadas).
 - [x] **Fase 4 — Pulido UX/UI:** micro-interacciones (mostrar/ocultar, copiar, loading states), pantalla de settings, estados vacíos/error.
 - [x] **Fase 5 — Endurecimiento y QA:** revisión de que no haya logs de datos sensibles, ocultar contenido sensible en el app switcher, manejo de biometría invalidada (cambio de huellas registradas en el SO).
-- [ ] **Fase 6 — Entrega:** plan.md/README final actualizados, build EAS interno para el teléfono del usuario.
+- [x] **Fase 6 — Entrega:** plan.md/README final actualizados, build EAS interno para el teléfono del usuario.
 
 ---
 
