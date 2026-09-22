@@ -4,13 +4,13 @@ import { StyleSheet, View } from 'react-native';
 
 import { unlockWithMasterPassword } from '@/auth/masterPassword';
 import { unlock } from '@/auth/session';
-import { isBiometricUnlockAvailable, retrieveVaultKeyWithBiometrics } from '@/crypto/secureKeyStore';
+import { clearBiometricVaultKey, isBiometricUnlockAvailable, retrieveVaultKeyWithBiometrics } from '@/crypto/secureKeyStore';
 import { Button } from '@/ui/components/Button';
 import { TextField } from '@/ui/components/TextField';
 import { ThemedText } from '@/ui/components/ThemedText';
 import { ThemedView } from '@/ui/components/ThemedView';
 import { spacing } from '@/ui/theme/theme';
-import { readVaultMeta } from '@/vault/vaultRepository';
+import { readVaultMeta, writeVaultMeta } from '@/vault/vaultRepository';
 
 export default function Unlock() {
   const [password, setPassword] = useState('');
@@ -49,7 +49,22 @@ export default function Unlock() {
     setError(null);
     try {
       const key = await retrieveVaultKeyWithBiometrics('Desbloquea secure-pass');
-      if (key && meta) {
+      if (!key) {
+        // meta.biometricEnabled era true pero no hay nada que recuperar: en
+        // Android esto es justo lo que pasa cuando el sistema invalidó la
+        // llave (ej. se agregó/cambió una huella o rostro) — nunca va a
+        // volver a funcionar sola, así que limpiamos en vez de dejar un
+        // botón que siempre falla en silencio.
+        await clearBiometricVaultKey();
+        if (meta) {
+          writeVaultMeta({ ...meta, biometricEnabled: false });
+        }
+        setError(
+          'Tu acceso biométrico dejó de ser válido (por ejemplo, cambiaste tu huella o rostro en el sistema). Usa tu contraseña maestra; puedes reactivar la biometría después desde Ajustes.'
+        );
+        return;
+      }
+      if (meta) {
         unlock(key, meta.autoLockMinutes);
         goToVault();
       }

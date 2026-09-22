@@ -36,18 +36,20 @@ Este documento resume las decisiones de seguridad, el modelo de datos, la arquit
 
 | Función | Librería | Justificación |
 |---|---|---|
-| Cifrado + KDF (Argon2id, XChaCha20-Poly1305) | `react-native-libsodium` | Bindings de libsodium, librería criptográfica auditada y madura, usada en apps de seguridad reales |
-| Llave protegida por biometría | `expo-secure-store` | Wrapper oficial de Expo sobre Keychain/Keystore, mantenido activamente |
-| Prompt biométrico | `expo-local-authentication` | Oficial de Expo |
-| Persistencia del vault cifrado | `expo-file-system` | Un único blob cifrado en disco, simple de auditar |
+| Cifrado + KDF (Argon2id, XChaCha20-Poly1305) | `react-native-libsodium` | Bindings de libsodium, librería criptográfica auditada y madura, usada en apps de seguridad reales. **Nota:** su `outputFormat: 'text'` está roto en la v1.7.0 (issue encontrado y documentado en `src/crypto/vaultCipher.ts`) — se usa `to_string()` de la misma librería en su lugar |
+| Llave protegida por biometría | `expo-secure-store` | Wrapper oficial de Expo sobre Keychain/Keystore. `requireAuthentication: true` dispara el prompt biométrico nativo directamente — no hizo falta usar `expo-local-authentication` para eso |
+| Chequeo de capacidad biométrica | `expo-local-authentication` | Instalado por sus permisos (`USE_BIOMETRIC`/Face ID); el chequeo real usa `SecureStore.canUseBiometricAuthentication()`, más específico para este caso de uso |
+| Persistencia del vault cifrado | `expo-file-system` | Un único blob cifrado en disco (API nueva `File`/`Directory`, síncrona), simple de auditar |
+| Portapapeles con auto-borrado | `expo-clipboard` | Oficial de Expo |
+| Ocultar contenido en apps recientes / bloquear capturas | `expo-screen-capture` | `FLAG_SECURE` en Android (Fase 5); blur automático en iOS |
 | Navegación | `expo-router` | Estándar actual del ecosistema Expo |
-| Animaciones | `react-native-reanimated` + `moti` | Incluidas en Expo, 60fps, poca complejidad |
-| Formularios | `react-hook-form` | Ligero |
-| Iconos | `@expo/vector-icons` | Offline, sin llamadas de red |
+| Animaciones | `react-native-reanimated` | Ya incluida por Expo Router; usada directamente (no se agregó `moti`, no hacía falta) |
+| Formularios | `useState` de React | Los formularios son simples (una pantalla, sin validación cruzada compleja); no se agregó `react-hook-form` para evitar una dependencia innecesaria |
+| Iconos | `@expo/vector-icons/Ionicons` | Se importa el subpaquete específico (no el barrel `@expo/vector-icons`), que metía las 20 familias de íconos (~4MB) al bundle por una sola que se usa |
 
 **Explícitamente excluido:** Sentry, Firebase, Amplitude o cualquier SDK de analítica/telemetría de terceros.
 
-**Nota de alcance técnico:** `react-native-libsodium` requiere un *development build* de EAS (no funciona en Expo Go, por incluir código nativo). Las pruebas durante desarrollo se harán con un build propio instalado en el teléfono, no vía Expo Go.
+**Nota de alcance técnico:** `react-native-libsodium` requiere un *development build* (no funciona en Expo Go, por incluir código nativo). Como esta máquina de desarrollo no tiene Android SDK instalado, el dev client se genera en la nube con `eas build --profile development` (ver `eas.json` y el README) en vez de `expo run:android` local.
 
 ---
 
@@ -81,42 +83,48 @@ Sin cifrar aparte (no son secretos por diseño, se necesitan antes de poder desc
 
 ```
 secure-pass/
-├── app/                       # expo-router — solo pantallas, sin lógica de cifrado
-│   ├── (auth)/
-│   │   ├── setup.tsx          # creación de contraseña maestra
-│   │   └── unlock.tsx         # desbloqueo (biometría / contraseña)
-│   ├── (vault)/
-│   │   ├── index.tsx          # lista de entradas
-│   │   ├── entry/[id].tsx     # ver/editar entrada
-│   │   ├── entry/new.tsx      # nueva entrada
-│   │   └── settings.tsx       # auto-lock, biometría, cambiar contraseña maestra
-│   └── _layout.tsx
+├── __mocks__/                   # mocks de Jest para módulos nativos (ver sección de tests)
 ├── src/
-│   ├── crypto/                 # CAPA DE CIFRADO — aislada, sin conocimiento de UI
-│   │   ├── keyDerivation.ts    # Argon2id
-│   │   ├── vaultCipher.ts      # cifrar/descifrar blob (XChaCha20-Poly1305)
-│   │   ├── secureKeyStore.ts   # expo-secure-store + expo-local-authentication
+│   ├── app/                     # expo-router — solo pantallas, sin lógica de cifrado
+│   │   ├── (auth)/
+│   │   │   ├── setup.tsx        # creación de contraseña maestra
+│   │   │   └── unlock.tsx       # desbloqueo (biometría / contraseña)
+│   │   ├── (vault)/
+│   │   │   ├── index.tsx        # lista de entradas (favoritos, chips de categoría, FAB)
+│   │   │   ├── entry/[id].tsx   # ver/editar/eliminar entrada
+│   │   │   ├── entry/new.tsx    # nueva entrada
+│   │   │   ├── settings.tsx     # auto-lock, biometría, cambiar contraseña maestra
+│   │   │   └── _layout.tsx      # guard: redirige a /unlock si la sesión no está activa
+│   │   ├── index.tsx            # redirige a /setup o /unlock según si ya existe un vault
+│   │   └── _layout.tsx          # tema, FLAG_SECURE / app-switcher protection
+│   ├── crypto/                   # CAPA DE CIFRADO — aislada, sin conocimiento de UI
+│   │   ├── keyDerivation.ts      # Argon2id
+│   │   ├── vaultCipher.ts        # cifrar/descifrar blob (XChaCha20-Poly1305)
+│   │   ├── secureKeyStore.ts     # llave protegida por biometría (expo-secure-store)
 │   │   └── __tests__/
-│   ├── vault/                  # CAPA DE DATOS
-│   │   ├── vaultRepository.ts  # leer/escribir el archivo cifrado
-│   │   ├── vaultStore.ts       # estado en memoria (se limpia en auto-lock)
-│   │   └── types.ts
+│   ├── vault/                    # CAPA DE DATOS
+│   │   ├── vaultRepository.ts    # leer/escribir vault.meta.json y vault.enc
+│   │   ├── vaultStore.ts         # estado en memoria + CRUD (se limpia en auto-lock)
+│   │   ├── types.ts
+│   │   └── __tests__/
 │   ├── auth/
-│   │   ├── session.ts          # auto-lock, temporizador
-│   │   └── masterPassword.ts
+│   │   ├── session.ts            # auto-lock, temporizador, AppState
+│   │   ├── masterPassword.ts     # crear/desbloquear/cambiar contraseña maestra
+│   │   └── __tests__/
 │   ├── ui/
-│   │   ├── components/
-│   │   ├── theme/               # design tokens: colores, tipografía, spacing
-│   │   └── icons/
+│   │   ├── components/           # ThemedText, ThemedView, Button, TextField, CopyButton,
+│   │   │                         # EntryCard, EntryForm, ScreenHeader, PlaceholderScreen
+│   │   └── theme/                # design tokens: colores, tipografía, spacing
 │   └── utils/
-│       └── clipboard.ts         # copiar + auto-clear
+│       ├── clipboard.ts          # copiar + auto-clear
+│       └── __tests__/
 ├── eas.json
-├── app.config.ts
+├── app.json
 ├── plan.md
 └── README.md
 ```
 
-**Regla de arquitectura:** `src/crypto` y `src/vault` nunca importan de `app/` ni de `src/ui`. La UI solo llama funciones ya seguras expuestas por `vaultRepository`/`session`, nunca maneja bytes de cifrado directamente. Esto permite auditar la seguridad revisando solo 2-3 carpetas.
+**Regla de arquitectura:** `src/crypto` y `src/vault` nunca importan de `src/app` ni de `src/ui`. La UI solo llama funciones ya seguras expuestas por `vaultRepository`/`vaultStore`/`session`, nunca maneja bytes de cifrado directamente. Esto permite auditar la seguridad revisando solo 2-3 carpetas.
 
 ---
 
@@ -141,7 +149,7 @@ secure-pass/
 - [x] **Fase 2 — Onboarding y acceso:** creación de contraseña maestra (con advertencia explícita de "sin recuperación"), pantalla de desbloqueo, sesión en memoria + auto-lock configurable.
 - [x] **Fase 3 — CRUD del vault:** modelo `VaultEntry` + repositorio de persistencia, lista con favoritos, crear/editar/eliminar, copiar con auto-clear de portapapeles, filtro de categoría minimalista y no invasivo (ej. chips horizontales discretos sobre la lista, sin pantalla propia, ocultos si no hay categorías creadas).
 - [x] **Fase 4 — Pulido UX/UI:** micro-interacciones (mostrar/ocultar, copiar, loading states), pantalla de settings, estados vacíos/error.
-- [ ] **Fase 5 — Endurecimiento y QA:** revisión de que no haya logs de datos sensibles, ocultar contenido sensible en el app switcher, manejo de biometría invalidada (cambio de huellas registradas en el SO).
+- [x] **Fase 5 — Endurecimiento y QA:** revisión de que no haya logs de datos sensibles, ocultar contenido sensible en el app switcher, manejo de biometría invalidada (cambio de huellas registradas en el SO).
 - [ ] **Fase 6 — Entrega:** plan.md/README final actualizados, build EAS interno para el teléfono del usuario.
 
 ---
@@ -158,3 +166,5 @@ secure-pass/
 
 - **SO mínimo:** código multiplataforma (Android 6+ / iOS 13+), pero las pruebas y el primer build EAS serán **solo para Android**, ya que el usuario no cuenta con dispositivo iOS por ahora.
 - **Categorías en el MVP:** sí incluidas desde el MVP, con un filtro minimalista y no invasivo (chips discretos sobre la lista de entradas, sin pantalla dedicada, ocultos si no hay categorías definidas).
+- **Botón de agregar entrada:** movido a un FAB (botón flotante circular, 60px) en la esquina inferior derecha, tras probar en dispositivo real — un ícono pequeño en el header no se sentía bien.
+- **Sin modo claro:** el tema oscuro es parte de la identidad visual de la app (no una preferencia de SO); no se implementó alternancia claro/oscuro.
