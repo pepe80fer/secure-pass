@@ -11,12 +11,12 @@
     "ios": {
       "bundleIdentifier": "com.giock.securepass",
       "buildNumber": "1",
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon.png",
       "supportsTablet": false
     },
     "android": {
       "package": "com.giock.securepass",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "backgroundColor": "#0B0E14",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
