@@ -1,7 +1,9 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { CopyButton } from '@/ui/components/CopyButton';
 import { ThemedText } from '@/ui/components/ThemedText';
+import type { IoniconName } from '@/ui/categoryIcon';
 import { colors, radius, spacing } from '@/ui/theme/theme';
 import type { VaultEntry } from '@/vault/types';
 
@@ -14,16 +16,22 @@ function avatarColorFor(id: string): string {
 
 type EntryCardProps = {
   entry: VaultEntry;
+  /** Ícono ya resuelto por el llamador (heurística de categoría + override elegido a mano). */
+  icon: IoniconName;
   onPress: () => void;
 };
 
-export function EntryCard({ entry, onPress }: EntryCardProps) {
+export function EntryCard({ entry, icon, onPress }: EntryCardProps) {
   return (
     <Pressable style={({ pressed }) => [styles.card, pressed && styles.cardPressed]} onPress={onPress}>
       <View style={[styles.avatar, { backgroundColor: avatarColorFor(entry.id) }]}>
-        <ThemedText type="smallBold" colorToken="text">
-          {entry.title.charAt(0).toUpperCase() || '?'}
-        </ThemedText>
+        {entry.category ? (
+          <Ionicons name={icon} size={18} color={colors.text} />
+        ) : (
+          <ThemedText type="smallBold" colorToken="text">
+            {entry.title.charAt(0).toUpperCase() || '?'}
+          </ThemedText>
+        )}
       </View>
 
       <View style={styles.info}>

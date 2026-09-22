@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import {
   createMasterPassword,
@@ -102,7 +102,16 @@ export default function Setup() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+      >
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="always"
+        keyboardDismissMode="on-drag"
+      >
         <ThemedText type="title">Crea tu contraseña maestra</ThemedText>
         <ThemedText colorToken="textSecondary">
           Es la única llave de tu vault. secure-pass no la guarda en ningún lado: si la olvidas,
@@ -148,12 +157,14 @@ export default function Setup() {
 
         <Button label="Crear vault" onPress={handleCreate} loading={loading} disabled={!canSubmit} />
       </ScrollView>
+      </KeyboardAvoidingView>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  flex: { flex: 1 },
   content: {
     flexGrow: 1,
     justifyContent: 'center',

@@ -1,13 +1,17 @@
 import * as FileSystemMock from 'expo-file-system';
 
 import { isUnlocked, lock, unlock } from '@/auth/session';
+import { encryptVault } from '@/crypto/vaultCipher';
+import { writeEncryptedVaultBlob } from '@/vault/vaultRepository';
 import {
   addEntry,
   clear,
   deleteEntry,
   ensureLoaded,
+  getCategoryIcons,
   getEntries,
   listCategories,
+  setCategoryIcon,
   subscribe,
   updateEntry,
 } from '@/vault/vaultStore';
@@ -126,6 +130,46 @@ describe('vaultStore', () => {
     expect(() => ensureLoaded()).not.toThrow();
     expect(isUnlocked()).toBe(false);
     expect(getEntries()).toEqual([]);
+  });
+
+  it('setCategoryIcon guarda y persiste el ícono elegido para una categoría', () => {
+    addEntry({ title: 'Banco', username: 'yo', password: 'hunter2', category: 'Banco' });
+    setCategoryIcon('Banco', 'star-outline');
+
+    expect(getCategoryIcons()).toEqual({ Banco: 'star-outline' });
+
+    // Sobrevive a un "reload" (bloquear/desbloquear) igual que las entradas.
+    clear();
+    unlock(fakeKey(), 5);
+    ensureLoaded();
+    expect(getCategoryIcons()).toEqual({ Banco: 'star-outline' });
+  });
+
+  it('setCategoryIcon con null quita el override', () => {
+    setCategoryIcon('Banco', 'star-outline');
+    setCategoryIcon('Banco', null);
+
+    expect(getCategoryIcons()).toEqual({});
+  });
+
+  it('migra un vault del formato viejo (solo array de entradas, sin categoryIcons)', () => {
+    const key = new Uint8Array(32).fill(7); // misma fakeKey() usada en unlock() del beforeEach
+    const legacyEntry = {
+      id: 'legacy-1',
+      title: 'Legado',
+      username: 'yo',
+      password: 'hunter2',
+      isFavorite: false,
+      createdAt: '2024-01-01T00:00:00.000Z',
+      updatedAt: '2024-01-01T00:00:00.000Z',
+      passwordChangedAt: '2024-01-01T00:00:00.000Z',
+    };
+    writeEncryptedVaultBlob(encryptVault(JSON.stringify([legacyEntry]), key));
+
+    ensureLoaded();
+
+    expect(getEntries()).toEqual([legacyEntry]);
+    expect(getCategoryIcons()).toEqual({});
   });
 
   it('notifica a los subscribers en cada mutación', () => {

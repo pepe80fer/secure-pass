@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import {
   changeMasterPassword,
@@ -123,7 +123,16 @@ export default function Settings() {
   return (
     <ThemedView style={styles.container}>
       <ScreenHeader title="Ajustes" />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="always"
+        keyboardDismissMode="on-drag"
+      >
         <View style={styles.section}>
           <ThemedText type="subtitle">Bloqueo automático</ThemedText>
           <ThemedText type="small" colorToken="textSecondary">
@@ -203,12 +212,14 @@ export default function Settings() {
           />
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  flex: { flex: 1 },
   content: { gap: spacing.five, padding: spacing.four, paddingBottom: spacing.six },
   section: { gap: spacing.two },
   field: { gap: spacing.one },

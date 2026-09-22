@@ -2,17 +2,21 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EntryCard } from '@/ui/components/EntryCard';
 import { ThemedText } from '@/ui/components/ThemedText';
 import { ThemedView } from '@/ui/components/ThemedView';
 import { colors, radius, spacing } from '@/ui/theme/theme';
-import { listCategories, useEntries } from '@/vault/vaultStore';
+import { iconForCategory } from '@/ui/categoryIcon';
+import { listCategories, useCategoryIcons, useEntries } from '@/vault/vaultStore';
 
 const ALL_CATEGORIES = '__all__';
 
 export default function VaultList() {
   const entries = useEntries();
+  const categoryIcons = useCategoryIcons();
+  const insets = useSafeAreaInsets();
   const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORIES);
 
   const categories = useMemo(() => listCategories(entries), [entries]);
@@ -29,7 +33,7 @@ export default function VaultList() {
   }, [entries, selectedCategory]);
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={[styles.container, { paddingTop: insets.top + spacing.three }]}>
       <View style={styles.header}>
         <ThemedText type="title">Mis contraseñas</ThemedText>
         <Pressable onPress={() => router.push('/(vault)/settings')} hitSlop={8} style={styles.iconButton}>
@@ -45,16 +49,25 @@ export default function VaultList() {
           showsHorizontalScrollIndicator={false}
           style={styles.chipList}
           contentContainerStyle={styles.chipRow}
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() => setSelectedCategory(item)}
-              style={[styles.chip, selectedCategory === item && styles.chipSelected]}
-            >
-              <ThemedText type="small" colorToken={selectedCategory === item ? 'text' : 'textSecondary'}>
-                {item === ALL_CATEGORIES ? 'Todas' : item}
-              </ThemedText>
-            </Pressable>
-          )}
+          renderItem={({ item }) => {
+            const isSelected = selectedCategory === item;
+            const iconColor = isSelected ? colors.text : colors.textSecondary;
+            return (
+              <Pressable
+                onPress={() => setSelectedCategory(item)}
+                style={[styles.chip, isSelected && styles.chipSelected]}
+              >
+                <Ionicons
+                  name={item === ALL_CATEGORIES ? 'apps-outline' : iconForCategory(item, categoryIcons)}
+                  size={14}
+                  color={iconColor}
+                />
+                <ThemedText type="small" colorToken={isSelected ? 'text' : 'textSecondary'}>
+                  {item === ALL_CATEGORIES ? 'Todas' : item}
+                </ThemedText>
+              </Pressable>
+            );
+          }}
         />
       )}
 
@@ -73,7 +86,11 @@ export default function VaultList() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
-            <EntryCard entry={item} onPress={() => router.push(`/(vault)/entry/${item.id}`)} />
+            <EntryCard
+              entry={item}
+              icon={iconForCategory(item.category, categoryIcons)}
+              onPress={() => router.push(`/(vault)/entry/${item.id}`)}
+            />
           )}
         />
       )}
@@ -106,6 +123,9 @@ const styles = StyleSheet.create({
   chipList: { flexGrow: 0, marginBottom: spacing.three },
   chipRow: { gap: spacing.two },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.one,
     paddingHorizontal: spacing.three,
     paddingVertical: spacing.one,
     borderRadius: radius.small,

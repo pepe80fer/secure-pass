@@ -4,7 +4,7 @@ import { getVaultKey, lock, subscribe as subscribeSession, isUnlocked } from '@/
 import { decryptVault, encryptVault } from '@/crypto/vaultCipher';
 import { randombytes_buf, to_hex } from 'react-native-libsodium';
 import { readEncryptedVaultBlob, writeEncryptedVaultBlob } from '@/vault/vaultRepository';
-import type { VaultEntry } from '@/vault/types';
+import type { CategoryIcons, VaultEntry } from '@/vault/types';
 
 /**
  * Estado del vault en memoria: solo existe mientras la sesión está
@@ -15,8 +15,10 @@ import type { VaultEntry } from '@/vault/types';
  */
 
 type Listener = () => void;
+type PersistedVault = { entries: VaultEntry[]; categoryIcons: CategoryIcons };
 
 let entries: VaultEntry[] = [];
+let categoryIcons: CategoryIcons = {};
 let loaded = false;
 const listeners = new Set<Listener>();
 
@@ -36,6 +38,19 @@ function generateId(): string {
   return to_hex(randombytes_buf(16));
 }
 
+/** El formato original solo guardaba un array de entradas; esto lo migra en memoria sin tocar disco hasta el próximo save. */
+function parsePersisted(json: string): PersistedVault {
+  const parsed: unknown = JSON.parse(json);
+  if (Array.isArray(parsed)) {
+    return { entries: parsed as VaultEntry[], categoryIcons: {} };
+  }
+  const data = parsed as Partial<PersistedVault>;
+  return {
+    entries: Array.isArray(data.entries) ? data.entries : [],
+    categoryIcons: data.categoryIcons && typeof data.categoryIcons === 'object' ? data.categoryIcons : {},
+  };
+}
+
 /** Descifra el vault desde disco la primera vez que se necesita; no-op después. */
 export function ensureLoaded(): void {
   if (loaded) {
@@ -45,13 +60,16 @@ export function ensureLoaded(): void {
   const blob = readEncryptedVaultBlob();
   if (!blob) {
     entries = [];
+    categoryIcons = {};
     loaded = true;
     notify();
     return;
   }
 
   try {
-    entries = JSON.parse(decryptVault(blob, key)) as VaultEntry[];
+    const data = parsePersisted(decryptVault(blob, key));
+    entries = data.entries;
+    categoryIcons = data.categoryIcons;
     loaded = true;
     notify();
   } catch {
@@ -64,16 +82,35 @@ export function ensureLoaded(): void {
   }
 }
 
-function persist(nextEntries: VaultEntry[]): void {
+function persist(nextEntries: VaultEntry[], nextCategoryIcons: CategoryIcons): void {
   const key = requireVaultKey();
+  const payload: PersistedVault = { entries: nextEntries, categoryIcons: nextCategoryIcons };
   // Cifra y escribe antes de comprometer el estado en memoria: si falla,
-  // `entries` no queda desincronizado de lo que realmente hay en disco.
-  writeEncryptedVaultBlob(encryptVault(JSON.stringify(nextEntries), key));
+  // el estado en memoria no queda desincronizado de lo que realmente hay en disco.
+  writeEncryptedVaultBlob(encryptVault(JSON.stringify(payload), key));
   entries = nextEntries;
+  categoryIcons = nextCategoryIcons;
 }
 
 export function getEntries(): VaultEntry[] {
   return entries;
+}
+
+export function getCategoryIcons(): CategoryIcons {
+  return categoryIcons;
+}
+
+/** Asigna (o, con `icon: null`, quita) el ícono elegido a mano para una categoría. */
+export function setCategoryIcon(category: string, icon: string | null): void {
+  ensureLoaded();
+  const next = { ...categoryIcons };
+  if (icon) {
+    next[category] = icon;
+  } else {
+    delete next[category];
+  }
+  persist(entries, next);
+  notify();
 }
 
 export function getEntry(id: string): VaultEntry | undefined {
@@ -113,7 +150,7 @@ export function addEntry(input: EntryInput): VaultEntry {
     passwordChangedAt: now,
   };
 
-  persist([...entries, entry]);
+  persist([...entries, entry], categoryIcons);
   notify();
   return entry;
 }
@@ -147,14 +184,17 @@ export function updateEntry(id: string, changes: EntryUpdateInput): VaultEntry {
 
   const next = [...entries];
   next[index] = updated;
-  persist(next);
+  persist(next, categoryIcons);
   notify();
   return updated;
 }
 
 export function deleteEntry(id: string): void {
   ensureLoaded();
-  persist(entries.filter((entry) => entry.id !== id));
+  persist(
+    entries.filter((entry) => entry.id !== id),
+    categoryIcons
+  );
   notify();
 }
 
@@ -172,6 +212,7 @@ export function listCategories(fromEntries: VaultEntry[]): string[] {
 /** Descarta el vault de memoria; se vuelve a descifrar al próximo desbloqueo. */
 export function clear(): void {
   entries = [];
+  categoryIcons = {};
   loaded = false;
   notify();
 }
@@ -192,4 +233,11 @@ export function useEntries(): VaultEntry[] {
     ensureLoaded();
   }, []);
   return useSyncExternalStore(subscribe, getEntries);
+}
+
+export function useCategoryIcons(): CategoryIcons {
+  useEffect(() => {
+    ensureLoaded();
+  }, []);
+  return useSyncExternalStore(subscribe, getCategoryIcons);
 }

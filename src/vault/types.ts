@@ -14,6 +14,14 @@ export type VaultEntry = {
   passwordChangedAt: string;
 };
 
+/**
+ * Ícono elegido para cada categoría (nombre de Ionicons, como string genérico
+ * — la validación de que sea un ícono real vive en la capa de UI). Vive
+ * cifrado junto a las entradas, no en VaultMeta: los nombres de categoría no
+ * deben quedar en texto plano en disco.
+ */
+export type CategoryIcons = Record<string, string>;
+
 export type VaultMeta = {
   kdfSalt: string;
   kdfParams: {
