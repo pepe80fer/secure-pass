@@ -32,14 +32,9 @@ export default function VaultList() {
     <ThemedView style={styles.container}>
       <View style={styles.header}>
         <ThemedText type="title">Mis contraseñas</ThemedText>
-        <View style={styles.headerActions}>
-          <Pressable onPress={() => router.push('/(vault)/settings')} hitSlop={8} style={styles.iconButton}>
-            <Ionicons name="settings-outline" size={20} color={colors.textSecondary} />
-          </Pressable>
-          <Pressable onPress={() => router.push('/(vault)/entry/new')} hitSlop={8} style={styles.addButton}>
-            <Ionicons name="add" size={22} color={colors.text} />
-          </Pressable>
-        </View>
+        <Pressable onPress={() => router.push('/(vault)/settings')} hitSlop={8} style={styles.iconButton}>
+          <Ionicons name="settings-outline" size={20} color={colors.textSecondary} />
+        </Pressable>
       </View>
 
       {categories.length > 0 && (
@@ -82,6 +77,14 @@ export default function VaultList() {
           )}
         />
       )}
+
+      <Pressable
+        onPress={() => router.push('/(vault)/entry/new')}
+        style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+        accessibilityLabel="Agregar contraseña"
+      >
+        <Ionicons name="add" size={30} color={colors.text} />
+      </Pressable>
     </ThemedView>
   );
 }
@@ -94,18 +97,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.three,
   },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.two },
   iconButton: {
     width: 36,
     height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -119,7 +113,24 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   chipSelected: { backgroundColor: colors.accent, borderColor: colors.accent },
-  list: { paddingBottom: spacing.six },
+  list: { paddingBottom: spacing.six * 2 },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.two },
   emptyText: { textAlign: 'center' },
+  fab: {
+    position: 'absolute',
+    right: spacing.four,
+    bottom: spacing.five,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  fabPressed: { opacity: 0.85 },
 });
