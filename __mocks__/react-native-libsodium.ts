@@ -22,7 +22,12 @@ function convert(result: Uint8Array, outputFormat?: OutputFormat): unknown {
     case 'hex':
       return sodium.to_hex(result);
     case 'text':
-      return sodium.to_string(result);
+      // react-native-libsodium@1.7.0's convertToOutputFormat literalmente
+      // siempre lanza esto para 'text' (bug real de la librería, no algo
+      // que simulemos) — se reproduce aquí a propósito para que los tests
+      // detecten si alguien vuelve a pedir outputFormat: 'text'. Usar
+      // to_string() en su lugar.
+      throw new Error('[ERR_ENCODING_INVALID_ENCODED_DATA]: The encoded data was not valid for encoding utf-8');
     default:
       return result;
   }
@@ -111,4 +116,8 @@ export function from_base64(input: string): Uint8Array {
 
 export function to_hex(input: string | Uint8Array): string {
   return sodium.to_hex(input);
+}
+
+export function to_string(bytes: Uint8Array): string {
+  return sodium.to_string(bytes);
 }

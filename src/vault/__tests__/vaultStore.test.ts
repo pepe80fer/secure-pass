@@ -1,6 +1,6 @@
 import * as FileSystemMock from 'expo-file-system';
 
-import { lock, unlock } from '@/auth/session';
+import { isUnlocked, lock, unlock } from '@/auth/session';
 import {
   addEntry,
   clear,
@@ -112,6 +112,19 @@ describe('vaultStore', () => {
 
     lock();
 
+    expect(getEntries()).toEqual([]);
+  });
+
+  it('si la llave en memoria no coincide con el vault en disco, bloquea en vez de crashear', () => {
+    addEntry({ title: 'Banco', username: 'yo', password: 'hunter2' });
+
+    // Simula una sesión que quedó con una llave que no es la que cifró el
+    // vault (ej. un reinicio inconsistente del contexto de JS).
+    clear();
+    unlock(new Uint8Array(32).fill(9), 5);
+
+    expect(() => ensureLoaded()).not.toThrow();
+    expect(isUnlocked()).toBe(false);
     expect(getEntries()).toEqual([]);
   });
 

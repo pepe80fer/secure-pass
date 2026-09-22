@@ -1,6 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 
-import { getVaultKey, subscribe as subscribeSession, isUnlocked } from '@/auth/session';
+import { getVaultKey, lock, subscribe as subscribeSession, isUnlocked } from '@/auth/session';
 import { decryptVault, encryptVault } from '@/crypto/vaultCipher';
 import { randombytes_buf, to_hex } from 'react-native-libsodium';
 import { readEncryptedVaultBlob, writeEncryptedVaultBlob } from '@/vault/vaultRepository';
@@ -43,9 +43,25 @@ export function ensureLoaded(): void {
   }
   const key = requireVaultKey();
   const blob = readEncryptedVaultBlob();
-  entries = blob ? (JSON.parse(decryptVault(blob, key)) as VaultEntry[]) : [];
-  loaded = true;
-  notify();
+  if (!blob) {
+    entries = [];
+    loaded = true;
+    notify();
+    return;
+  }
+
+  try {
+    entries = JSON.parse(decryptVault(blob, key)) as VaultEntry[];
+    loaded = true;
+    notify();
+  } catch {
+    // La llave en memoria no coincide con lo que hay en disco (ej. una
+    // sesión que quedó en un estado inconsistente). En una app de
+    // contraseñas es más seguro forzar un nuevo login que mostrar un error
+    // o datos parciales — lock() dispara la sub­scripción que ya limpia
+    // el store y (vault)/_layout.tsx redirige a /unlock automáticamente.
+    lock();
+  }
 }
 
 function persist(nextEntries: VaultEntry[]): void {

@@ -66,13 +66,13 @@ export default function Setup() {
     }, 0);
   }
 
-  function handleEnableBiometrics(enable: boolean) {
+  async function handleEnableBiometrics(enable: boolean) {
     if (enable) {
       const key = getVaultKey();
       const meta = readVaultMeta();
       if (key && meta) {
         try {
-          storeVaultKeyForBiometricUnlock(key);
+          await storeVaultKeyForBiometricUnlock(key);
           writeVaultMeta({ ...meta, biometricEnabled: true });
         } catch {
           Alert.alert('No se pudo activar la biometría', 'Puedes intentarlo de nuevo después desde Ajustes.');

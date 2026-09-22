@@ -5,6 +5,7 @@ import {
   from_base64,
   randombytes_buf,
   to_base64,
+  to_string,
 } from 'react-native-libsodium';
 
 /**
@@ -38,14 +39,18 @@ export function encryptVault(plaintext: string, vaultKey: Uint8Array): Encrypted
 
 export function decryptVault(blob: EncryptedVault, vaultKey: Uint8Array): string {
   try {
-    return crypto_aead_xchacha20poly1305_ietf_decrypt(
+    // outputFormat: 'text' no se usa a propósito — react-native-libsodium@1.7.0
+    // lo tiene roto (siempre lanza ERR_ENCODING_INVALID_ENCODED_DATA sin
+    // intentar decodificar). to_string() es la utilidad de la misma librería
+    // que sí funciona.
+    const plaintextBytes = crypto_aead_xchacha20poly1305_ietf_decrypt(
       null,
       from_base64(blob.ciphertext),
       ADDITIONAL_DATA,
       from_base64(blob.nonce),
-      vaultKey,
-      'text'
+      vaultKey
     );
+    return to_string(plaintextBytes);
   } catch {
     throw new Error('No se pudo descifrar el vault: contraseña incorrecta o datos corruptos.');
   }
