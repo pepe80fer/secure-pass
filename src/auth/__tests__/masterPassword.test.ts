@@ -1,6 +1,7 @@
 import * as FileSystemMock from 'expo-file-system';
 
 import {
+  changeMasterPassword,
   createMasterPassword,
   evaluatePasswordStrength,
   InvalidMasterPasswordError,
@@ -9,7 +10,8 @@ import {
   unlockWithMasterPassword,
   VaultAlreadyExistsError,
 } from '@/auth/masterPassword';
-import { readVaultMeta } from '@/vault/vaultRepository';
+import { decryptVault, encryptVault } from '@/crypto/vaultCipher';
+import { readEncryptedVaultBlob, readVaultMeta, writeEncryptedVaultBlob } from '@/vault/vaultRepository';
 
 // El mock en __mocks__/expo-file-system.ts expone este helper solo para
 // tests; no existe en el tipo real del paquete, de ahí el cast.
@@ -57,6 +59,55 @@ describe('unlockWithMasterPassword', () => {
   it('rechaza la contraseña incorrecta', () => {
     createMasterPassword('correct horse battery staple');
     expect(() => unlockWithMasterPassword('contraseña-equivocada')).toThrow(InvalidMasterPasswordError);
+  });
+});
+
+describe('changeMasterPassword', () => {
+  it('falla si todavía no existe un vault', () => {
+    expect(() => changeMasterPassword('a', 'una-nueva-contraseña-larga')).toThrow(NoVaultConfiguredError);
+  });
+
+  it('rechaza si la contraseña actual es incorrecta', () => {
+    createMasterPassword('correct horse battery staple');
+    expect(() => changeMasterPassword('contraseña-equivocada', 'una-nueva-contraseña-larga')).toThrow(
+      InvalidMasterPasswordError
+    );
+  });
+
+  it('rechaza una contraseña nueva más corta que el mínimo', () => {
+    createMasterPassword('correct horse battery staple');
+    expect(() => changeMasterPassword('correct horse battery staple', 'corta')).toThrow(
+      `${MIN_MASTER_PASSWORD_LENGTH} caracteres`
+    );
+  });
+
+  it('la contraseña anterior deja de servir y la nueva sí', () => {
+    createMasterPassword('correct horse battery staple');
+    changeMasterPassword('correct horse battery staple', 'una-nueva-contraseña-larga');
+
+    expect(() => unlockWithMasterPassword('correct horse battery staple')).toThrow(InvalidMasterPasswordError);
+    expect(() => unlockWithMasterPassword('una-nueva-contraseña-larga')).not.toThrow();
+  });
+
+  it('preserva las entradas existentes, re-cifradas con la llave nueva', () => {
+    const oldKey = createMasterPassword('correct horse battery staple');
+    const originalContent = JSON.stringify([{ id: '1', title: 'Banco' }]);
+    writeEncryptedVaultBlob(encryptVault(originalContent, oldKey));
+
+    const { vaultKey: newKey } = changeMasterPassword('correct horse battery staple', 'una-nueva-contraseña-larga');
+
+    const blob = readEncryptedVaultBlob();
+    expect(blob).not.toBeNull();
+    expect(decryptVault(blob!, newKey)).toBe(originalContent);
+  });
+
+  it('genera un salt nuevo (re-deriva la llave por completo, no solo la envuelve)', () => {
+    createMasterPassword('correct horse battery staple');
+    const saltBefore = readVaultMeta()?.kdfSalt;
+
+    changeMasterPassword('correct horse battery staple', 'una-nueva-contraseña-larga');
+
+    expect(readVaultMeta()?.kdfSalt).not.toBe(saltBefore);
   });
 });
 

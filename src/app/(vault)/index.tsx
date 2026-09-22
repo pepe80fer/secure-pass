@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
@@ -6,9 +7,7 @@ import { EntryCard } from '@/ui/components/EntryCard';
 import { ThemedText } from '@/ui/components/ThemedText';
 import { ThemedView } from '@/ui/components/ThemedView';
 import { colors, radius, spacing } from '@/ui/theme/theme';
-import { copyToClipboard } from '@/utils/clipboard';
 import { listCategories, useEntries } from '@/vault/vaultStore';
-import type { VaultEntry } from '@/vault/types';
 
 const ALL_CATEGORIES = '__all__';
 
@@ -33,11 +32,14 @@ export default function VaultList() {
     <ThemedView style={styles.container}>
       <View style={styles.header}>
         <ThemedText type="title">Mis contraseñas</ThemedText>
-        <Pressable onPress={() => router.push('/(vault)/entry/new')} hitSlop={8} style={styles.addButton}>
-          <ThemedText type="subtitle" colorToken="text">
-            +
-          </ThemedText>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable onPress={() => router.push('/(vault)/settings')} hitSlop={8} style={styles.iconButton}>
+            <Ionicons name="settings-outline" size={20} color={colors.textSecondary} />
+          </Pressable>
+          <Pressable onPress={() => router.push('/(vault)/entry/new')} hitSlop={8} style={styles.addButton}>
+            <Ionicons name="add" size={22} color={colors.text} />
+          </Pressable>
+        </View>
       </View>
 
       {categories.length > 0 && (
@@ -76,20 +78,12 @@ export default function VaultList() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
-            <EntryCard
-              entry={item}
-              onPress={() => router.push(`/(vault)/entry/${item.id}`)}
-              onCopyPassword={() => handleQuickCopy(item)}
-            />
+            <EntryCard entry={item} onPress={() => router.push(`/(vault)/entry/${item.id}`)} />
           )}
         />
       )}
     </ThemedView>
   );
-}
-
-async function handleQuickCopy(entry: VaultEntry): Promise<void> {
-  await copyToClipboard(entry.password);
 }
 
 const styles = StyleSheet.create({
@@ -99,6 +93,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: spacing.three,
+  },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.two },
+  iconButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addButton: {
     width: 36,

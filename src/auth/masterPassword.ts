@@ -5,8 +5,14 @@ import {
   generateKdfSalt,
   verifyVaultKey,
 } from '@/crypto/keyDerivation';
-import { encryptVault } from '@/crypto/vaultCipher';
-import { readVaultMeta, vaultExists, writeEncryptedVaultBlob, writeVaultMeta } from '@/vault/vaultRepository';
+import { decryptVault, encryptVault } from '@/crypto/vaultCipher';
+import {
+  readEncryptedVaultBlob,
+  readVaultMeta,
+  vaultExists,
+  writeEncryptedVaultBlob,
+  writeVaultMeta,
+} from '@/vault/vaultRepository';
 import type { VaultMeta } from '@/vault/types';
 
 /**
@@ -79,4 +85,43 @@ export function unlockWithMasterPassword(password: string): { vaultKey: Uint8Arr
   }
 
   return { vaultKey, meta };
+}
+
+/**
+ * Cambia la contraseña maestra: re-deriva una llave nueva (nuevo salt) y
+ * re-cifra el vault completo con ella. La llave anterior deja de servir
+ * para nada en cuanto esto termina. Si la biometría estaba activada, el
+ * llamador debe volver a envolver la nueva llave (ver secureKeyStore) —
+ * este módulo no toca el Keychain/Keystore directamente.
+ */
+export function changeMasterPassword(
+  currentPassword: string,
+  newPassword: string
+): { vaultKey: Uint8Array; meta: VaultMeta } {
+  const meta = readVaultMeta();
+  if (!meta) {
+    throw new NoVaultConfiguredError('No hay un vault configurado todavía.');
+  }
+
+  const currentKey = deriveVaultKey(currentPassword, meta.kdfSalt, meta.kdfParams);
+  if (!verifyVaultKey(currentKey, meta.verifierHash)) {
+    throw new InvalidMasterPasswordError('La contraseña actual es incorrecta.');
+  }
+  if (newPassword.length < MIN_MASTER_PASSWORD_LENGTH) {
+    throw new Error(`La contraseña maestra debe tener al menos ${MIN_MASTER_PASSWORD_LENGTH} caracteres.`);
+  }
+
+  const existingBlob = readEncryptedVaultBlob();
+  const plaintext = existingBlob ? decryptVault(existingBlob, currentKey) : '[]';
+
+  const kdfSalt = generateKdfSalt();
+  const kdfParams = defaultKdfParams();
+  const vaultKey = deriveVaultKey(newPassword, kdfSalt, kdfParams);
+  const verifierHash = computeKeyVerifier(vaultKey);
+
+  writeEncryptedVaultBlob(encryptVault(plaintext, vaultKey));
+  const newMeta: VaultMeta = { ...meta, kdfSalt, kdfParams, verifierHash };
+  writeVaultMeta(newMeta);
+
+  return { vaultKey, meta: newMeta };
 }

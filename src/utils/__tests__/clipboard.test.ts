@@ -5,7 +5,9 @@ jest.mock('expo-clipboard', () => ({
   getStringAsync: jest.fn().mockResolvedValue(''),
 }));
 
-import { copyToClipboard } from '@/utils/clipboard';
+import { AUTO_CLEAR_SECONDS, copyToClipboard } from '@/utils/clipboard';
+
+const AUTO_CLEAR_MS = AUTO_CLEAR_SECONDS * 1000;
 
 const setStringAsync = Clipboard.setStringAsync as jest.Mock;
 const getStringAsync = Clipboard.getStringAsync as jest.Mock;
@@ -30,7 +32,7 @@ describe('copyToClipboard', () => {
     getStringAsync.mockResolvedValue('hunter2');
     await copyToClipboard('hunter2');
 
-    await jest.advanceTimersByTimeAsync(45_000);
+    await jest.advanceTimersByTimeAsync(AUTO_CLEAR_MS);
 
     expect(setStringAsync).toHaveBeenLastCalledWith('');
   });
@@ -39,7 +41,7 @@ describe('copyToClipboard', () => {
     getStringAsync.mockResolvedValue('otra-cosa-que-el-usuario-copió');
     await copyToClipboard('hunter2');
 
-    await jest.advanceTimersByTimeAsync(45_000);
+    await jest.advanceTimersByTimeAsync(AUTO_CLEAR_MS);
 
     expect(setStringAsync).not.toHaveBeenCalledWith('');
   });

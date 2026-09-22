@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 
 import { EntryForm } from '@/ui/components/EntryForm';
+import { ScreenHeader } from '@/ui/components/ScreenHeader';
 import { ThemedText } from '@/ui/components/ThemedText';
 import { ThemedView } from '@/ui/components/ThemedView';
 import { spacing } from '@/ui/theme/theme';
@@ -14,6 +15,7 @@ export default function NewEntry() {
 
   return (
     <ThemedView style={{ flex: 1 }}>
+      <ScreenHeader title="Nueva entrada" />
       {error && (
         <ThemedText colorToken="danger" type="small" style={{ paddingHorizontal: spacing.four, paddingTop: spacing.three }}>
           {error}

@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { CopyButton } from '@/ui/components/CopyButton';
 import { ThemedText } from '@/ui/components/ThemedText';
 import { colors, radius, spacing } from '@/ui/theme/theme';
 import type { VaultEntry } from '@/vault/types';
@@ -14,10 +15,9 @@ function avatarColorFor(id: string): string {
 type EntryCardProps = {
   entry: VaultEntry;
   onPress: () => void;
-  onCopyPassword: () => void;
 };
 
-export function EntryCard({ entry, onPress, onCopyPassword }: EntryCardProps) {
+export function EntryCard({ entry, onPress }: EntryCardProps) {
   return (
     <Pressable style={({ pressed }) => [styles.card, pressed && styles.cardPressed]} onPress={onPress}>
       <View style={[styles.avatar, { backgroundColor: avatarColorFor(entry.id) }]}>
@@ -44,11 +44,7 @@ export function EntryCard({ entry, onPress, onCopyPassword }: EntryCardProps) {
         ) : null}
       </View>
 
-      <Pressable onPress={onCopyPassword} hitSlop={8} style={styles.copyButton}>
-        <ThemedText type="small" colorToken="accent">
-          Copiar
-        </ThemedText>
-      </Pressable>
+      <CopyButton value={entry.password} />
     </Pressable>
   );
 }
@@ -75,5 +71,4 @@ const styles = StyleSheet.create({
   info: { flex: 1, gap: 2 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.one },
   title: { flexShrink: 1 },
-  copyButton: { paddingHorizontal: spacing.two, paddingVertical: spacing.one },
 });

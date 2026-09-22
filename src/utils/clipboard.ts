@@ -4,7 +4,8 @@ import * as Clipboard from 'expo-clipboard';
  * Copiar contraseñas al portapapeles con auto-limpieza. Ver plan.md, Fase 3.
  */
 
-const AUTO_CLEAR_MS = 45_000;
+export const AUTO_CLEAR_SECONDS = 45;
+const AUTO_CLEAR_MS = AUTO_CLEAR_SECONDS * 1000;
 
 let clearTimer: ReturnType<typeof setTimeout> | null = null;
 let lastCopiedValue: string | null = null;

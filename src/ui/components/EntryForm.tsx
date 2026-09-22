@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View, type TextInputProps } from 'react-native';
 
 import { Button } from '@/ui/components/Button';
+import { CopyButton } from '@/ui/components/CopyButton';
 import { TextField } from '@/ui/components/TextField';
 import { ThemedText } from '@/ui/components/ThemedText';
 import { radius, spacing, colors } from '@/ui/theme/theme';
@@ -20,14 +21,21 @@ type EntryFormProps = {
   initialValues: EntryFormValues;
   submitLabel: string;
   onSubmit: (values: EntryFormValues) => void;
-  /** Solo se pasa en modo edición; su presencia es lo que muestra los botones "Copiar". */
-  onCopy?: (value: string, label: string) => void;
+  /** Solo en modo edición: muestra los botones "Copiar" junto a usuario/contraseña. */
+  showCopyButtons?: boolean;
   onDelete?: () => void;
   knownCategories?: string[];
 };
 
 /** Formulario compartido por (vault)/entry/new.tsx y (vault)/entry/[id].tsx. */
-export function EntryForm({ initialValues, submitLabel, onSubmit, onCopy, onDelete, knownCategories }: EntryFormProps) {
+export function EntryForm({
+  initialValues,
+  submitLabel,
+  onSubmit,
+  showCopyButtons,
+  onDelete,
+  knownCategories,
+}: EntryFormProps) {
   const [values, setValues] = useState(initialValues);
   const canSave = values.title.trim().length > 0 && values.password.length > 0;
 
@@ -48,7 +56,7 @@ export function EntryForm({ initialValues, submitLabel, onSubmit, onCopy, onDele
         label="Usuario o correo"
         value={values.username}
         onChangeText={(text) => set('username', text)}
-        onCopy={onCopy ? () => onCopy(values.username, 'Usuario') : undefined}
+        copyValue={showCopyButtons ? values.username : undefined}
       />
 
       <FieldWithCopy
@@ -56,7 +64,7 @@ export function EntryForm({ initialValues, submitLabel, onSubmit, onCopy, onDele
         value={values.password}
         onChangeText={(text) => set('password', text)}
         isPassword
-        onCopy={onCopy ? () => onCopy(values.password, 'Contraseña') : undefined}
+        copyValue={showCopyButtons ? values.password : undefined}
       />
 
       <TextField
@@ -111,21 +119,20 @@ export function EntryForm({ initialValues, submitLabel, onSubmit, onCopy, onDele
 type FieldWithCopyProps = TextInputProps & {
   label: string;
   isPassword?: boolean;
-  onCopy?: () => void;
+  /** Si se pasa (no vacío), muestra el botón de copiar para este valor. */
+  copyValue?: string;
 };
 
-function FieldWithCopy({ onCopy, ...rest }: FieldWithCopyProps) {
+function FieldWithCopy({ copyValue, ...rest }: FieldWithCopyProps) {
   return (
     <View style={styles.fieldRow}>
       <View style={styles.fieldGrow}>
         <TextField {...rest} />
       </View>
-      {onCopy && (
-        <Pressable onPress={onCopy} hitSlop={8} style={styles.copyButton}>
-          <ThemedText type="small" colorToken="accent">
-            Copiar
-          </ThemedText>
-        </Pressable>
+      {copyValue !== undefined && (
+        <View style={styles.copyButtonWrapper}>
+          <CopyButton value={copyValue} />
+        </View>
       )}
     </View>
   );
@@ -140,7 +147,7 @@ const styles = StyleSheet.create({
   field: { gap: spacing.two },
   fieldRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.two },
   fieldGrow: { flex: 1 },
-  copyButton: { paddingVertical: spacing.three, paddingHorizontal: spacing.one },
+  copyButtonWrapper: { paddingBottom: spacing.three },
   notesInput: { minHeight: 80, textAlignVertical: 'top' },
   favoriteRow: { paddingVertical: spacing.one },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.one },

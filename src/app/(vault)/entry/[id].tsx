@@ -1,11 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
-import { Alert } from 'react-native';
+import { Alert, StyleSheet } from 'react-native';
 
+import { Button } from '@/ui/components/Button';
 import { EntryForm } from '@/ui/components/EntryForm';
-import { PlaceholderScreen } from '@/ui/components/PlaceholderScreen';
+import { ScreenHeader } from '@/ui/components/ScreenHeader';
+import { ThemedText } from '@/ui/components/ThemedText';
 import { ThemedView } from '@/ui/components/ThemedView';
-import { copyToClipboard } from '@/utils/clipboard';
+import { spacing } from '@/ui/theme/theme';
 import { deleteEntry, listCategories, updateEntry, useEntries } from '@/vault/vaultStore';
 
 export default function EntryDetail() {
@@ -18,11 +20,20 @@ export default function EntryDetail() {
   );
 
   if (!entry) {
-    return <PlaceholderScreen title="Entrada no encontrada" phase="Puede que ya se haya eliminado." />;
+    return (
+      <ThemedView style={styles.notFound}>
+        <ThemedText type="title">Entrada no encontrada</ThemedText>
+        <ThemedText colorToken="textSecondary" style={styles.notFoundText}>
+          Puede que ya se haya eliminado.
+        </ThemedText>
+        <Button label="Volver" variant="secondary" onPress={() => router.back()} style={styles.notFoundButton} />
+      </ThemedView>
+    );
   }
 
   return (
     <ThemedView style={{ flex: 1 }}>
+      <ScreenHeader title={entry.title} />
       <EntryForm
         initialValues={{
           title: entry.title,
@@ -35,10 +46,7 @@ export default function EntryDetail() {
         }}
         submitLabel="Guardar cambios"
         knownCategories={knownCategories}
-        onCopy={(value, label) => {
-          void copyToClipboard(value);
-          Alert.alert('Copiado', `${label} se copió y se borrará del portapapeles en unos segundos.`);
-        }}
+        showCopyButtons
         onDelete={() => {
           Alert.alert('Eliminar entrada', `¿Eliminar "${entry.title}"? Esta acción no se puede deshacer.`, [
             { text: 'Cancelar', style: 'cancel' },
@@ -60,3 +68,9 @@ export default function EntryDetail() {
     </ThemedView>
   );
 }
+
+const styles = StyleSheet.create({
+  notFound: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.two, padding: spacing.four },
+  notFoundText: { textAlign: 'center' },
+  notFoundButton: { marginTop: spacing.two },
+});

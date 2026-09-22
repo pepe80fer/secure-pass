@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
@@ -28,10 +29,12 @@ export function TextField({ label, error, isPassword, style, ...rest }: TextFiel
           {...rest}
         />
         {isPassword && (
-          <Pressable onPress={() => setIsSecure((prev) => !prev)} hitSlop={8}>
-            <ThemedText type="small" colorToken="accent">
-              {isSecure ? 'Mostrar' : 'Ocultar'}
-            </ThemedText>
+          <Pressable
+            onPress={() => setIsSecure((prev) => !prev)}
+            hitSlop={8}
+            accessibilityLabel={isSecure ? 'Mostrar contraseña' : 'Ocultar contraseña'}
+          >
+            <Ionicons name={isSecure ? 'eye-outline' : 'eye-off-outline'} size={18} color={colors.textSecondary} />
           </Pressable>
         )}
       </View>

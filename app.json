@@ -45,7 +45,8 @@
         {
           "faceIDPermission": "secure-pass usa Face ID para desbloquear tu vault de contraseñas."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,
